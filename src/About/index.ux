@@ -1,0 +1,80 @@
+<template>
+  <div class="demo-page">
+    <image id="icon" src="{{icon}}"></image>
+
+    <text id="name">{{name}}</text>
+
+    <text id="desc">{{desc}}</text>
+
+    <!-- 创建快捷方式 -->
+    <input class="btn" type="button" onclick="createShortcut" value="创建快捷方式"></input>
+  </div>
+</template>
+
+<style>
+  .demo-page {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  /* 应用图标 */
+  #icon {
+    margin-top: 90px;
+    width: 134px;
+    height: 134px;
+    border-radius: 10px;
+    border: 1px solid #8d8d8d;
+  }
+
+  /* 应用名 */
+  #name {
+    margin-top: 20px;
+    font-size: 36px;
+    color: #000000;
+  }
+
+  /* 应用描述 */
+  #desc {
+    width: 650px;
+    margin-top: 40px;
+    line-height: 35px;
+    font-size: 25px;
+    color: #8d8d8d;
+  }
+
+  /* 按钮 */
+  .btn {
+    width: 550px;
+    height: 86px;
+    margin-top: 75px;
+    border-radius: 43px;
+    background-color: #09ba07;
+    font-size: 30px;
+    color: #ffffff;
+  }
+
+</style>
+
+<script>
+  /**
+   * 默认的菜单页(可自定义)
+   * name默认为manifest文件中的name字段
+   * icon默认为manifest文件中的icon字段
+   * 若需修改页面中文本，请修改VM data中对应变量
+   * 注意：使用加载器测试`创建桌面快捷方式`功能时，需要进入系统设置->权限管理->开启应用加载器的`桌面快捷方式`权限，才能保存到桌面。应用上线后可自动获取`桌面快捷方式`权限
+   */
+  export default {
+    props: ['name', 'icon'],
+    data: {
+      desc: '24快应用期末',
+    },
+    onInit () {
+      // 设置标题栏
+      this.$page.setTitleBar({ text: this.name })
+    },
+    createShortcut () {
+      // 创建快捷方式
+      this.$app.createShortcut()
+    }
+  }
+</script>

@@ -1,0 +1,274 @@
+<template>
+  <div class="container">
+    <!-- 标题栏 -->
+    <div class="title-bar">
+      <text class="title">Title</text>
+    </div>
+
+    <!-- 信息展示部分 -->
+    <div class="info-section">
+      <div class="info-row">
+        <text class="label">当前余额</text>
+        <text class="value">{{ currentBalance }}元</text>
+      </div>
+      <div class="info-row">
+        <text class="label">本月开销</text>
+        <text class="value">{{ monthlyExpense }}元</text>
+      </div>
+    </div>
+
+    <!-- 图表展示部分 -->
+    <div class="chart-section">
+      <canvas id="expenseChart" class="chart" style="width: 300px; height: 200px;"></canvas>
+    </div>
+
+    <!-- 添加item按钮 -->
+    <div class="bottom-button">
+      <div class="plus-button" @click="addNewItem">
+        <text class="plus-symbol">+</text>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script>
+  import storage from '@system.storage'
+  import router from '@system.router'
+
+  export default {
+  data: {
+    _today: null,
+    currentBalance: '000,000.0',
+    monthlyExpense: '000,000.0',
+    inThisMonth: [],
+    incomeData: null,
+    expenseData: null,
+    realData: {}  // 只记录本月的
+  },
+
+  // 获取或设置默认的数据映射
+  getOrSetDefaultMyDataMap(key, defaultMap) {
+    const defaultObject = Object.fromEntries(defaultMap);
+
+    return new Promise((resolve, reject) => {
+      storage.get({
+        key,
+        success: (data) => {
+          try {
+            const map = new Map(Object.entries(JSON.parse(data)));
+            console.log(`${key} 读取成功:`, map);
+            resolve(map);  // 返回解析成功的 Map
+          } catch (error) {
+            console.error(`解析 ${key} 失败:`, error);
+            reject(error);
+          }
+        },
+        fail: () => {
+          console.log(`${key} 不存在，设置为默认值`);
+          storage.set({
+            key,
+            value: JSON.stringify(defaultObject),
+            success: () => {
+              console.log(`默认 ${key} 存储成功`);
+              resolve(defaultMap);  // 返回默认的 Map
+            },
+            fail: (err) => {
+              console.error(`默认 ${key} 存储失败`, err);
+              reject(err);
+            },
+          });
+        },
+      });
+    });
+  },
+
+  // 初始化本月日期
+  initThisMonthDay() {
+    const today = new Date();
+    const year = today.getFullYear(); // 获取当前年份
+    const month = today.getMonth(); // 获取当前月份（0-11）
+
+    // 获取当前月份的第一天和最后一天
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+
+    const dates = [];
+
+    // 遍历当前月的所有日期
+    for (let day = firstDay.getDate(); day <= lastDay.getDate(); day++) {
+      const date = new Date(year, month, day);
+      dates.push(date.toISOString().split('T')[0]); // 格式化日期为 YYYY-MM-DD
+    }
+
+    this.inThisMonth = dates;
+    this._today = today.toISOString().split('T')[0];
+  },
+
+  // 异步初始化数据
+  onInit() {
+    let that = this;
+
+    // 获取数据的异步操作
+    Promise.all([
+      this.getOrSetDefaultMyDataMap("order_income_data", new Map([['1970-1-1', 0]])),
+      this.getOrSetDefaultMyDataMap("order_expense_data", new Map([['1970-1-1', 0]]))
+    ])
+    .then(([incomeData, expenseData]) => {
+      // 获取到数据后继续执行
+      that.incomeData = incomeData;
+      that.expenseData = expenseData;
+
+      // 初始化其他数据
+      that.initThisMonthDay(); 
+      that.calculateData();
+      that.drawExpenseChart();
+    })
+    .catch((error) => {
+      console.error("初始化数据失败:", error);
+    });
+  },
+
+  // 计算数据
+  calculateData() {
+    if (!this.incomeData || !this.expenseData) return;
+
+    // 计算营收
+    for (const _date of this.inThisMonth) {
+      const _value_in = this.incomeData.get(_date) || [];
+      const _value_exp = this.expenseData.get(_date) || [];
+      // 计算当天的总开销、收入
+      const sum_in = _value_in.reduce((acc, cur) => acc + cur, 0);
+      const sum_exp = _value_exp.reduce((acc, cur) => acc + cur, 0);
+
+      this.realData[_date] = sum_in - sum_exp;
+    }
+  },
+
+  // 绘制消费折线图
+  drawExpenseChart() {
+    const ctx = this.$element('expenseChart').getContext('2d');
+    const days = this.inThisMonth; // 获取当月所有的日期
+    const realData = this.realData; // 获取当月的实际数据
+    const canvasWidth = 600;
+    const canvasHeight = 300;
+    const pointRadius = 4;
+
+    // 清空画布
+    ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+
+    // 绘制坐标轴
+    ctx.beginPath();
+    ctx.moveTo(50, 20); // Y轴起点
+    ctx.lineTo(50, 280); // Y轴终点
+    ctx.lineTo(580, 280); // X轴终点
+    ctx.strokeStyle = '#333';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // 绘制横坐标（天数）
+    const stepX = (canvasWidth - 100) / (days.length - 1); // 计算X轴每个点的间隔
+    days.forEach((day, index) => {
+        const x = 50 + stepX * index;
+        ctx.fillText(day, x, 290); // 绘制每个日期
+    });
+
+    // 绘制纵坐标（数据值）
+    const maxValue = Math.max(...Object.values(realData)); // 获取最大值，用来设置纵坐标的刻度
+    const stepY = (canvasHeight - 60) / maxValue; // 纵坐标步长
+
+    // 绘制折线图
+    ctx.beginPath();
+    ctx.strokeStyle = '#15aabf';
+    ctx.lineWidth = 2;
+
+    // 绘制折线图的每个点
+    days.forEach((day, index) => {
+        const x = 50 + stepX * index; // 横坐标位置
+        const y = 280 - (realData[day]) * stepY; // 根据realData计算纵坐标位置
+        if (index === 0) {
+            ctx.moveTo(x, y); // 起始点
+        } else {
+            ctx.lineTo(x, y); // 绘制到下一个点
+        }
+
+        // 绘制数据点
+        ctx.beginPath();
+        ctx.arc(x, y, pointRadius, 0, 2 * Math.PI); // 圆形数据点
+        ctx.fillStyle = '#15aabf';
+        ctx.fill();
+    });
+
+    ctx.stroke();
+  }
+};
+
+</script>
+
+<style>
+  .container {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    height: 100%;
+    background-color: #ffffff;
+  }
+
+  .title-bar {
+    height: 80px;
+    justify-content: center;
+    align-items: center;
+    border: 1px solid #cccccc;
+  }
+
+  .title {
+    font-size: 36px;
+    font-weight: bold;
+  }
+
+  .info-section {
+    padding: 20px;
+    border: 1px solid #cccccc;
+  }
+
+  .info-row {
+    flex-direction: row;
+    justify-content: space-between;
+    margin-top: 15px;
+  }
+
+  .label, .value {
+    font-size: 30px;
+    color: #333333;
+  }
+
+  .chart-section {
+    justify-content: center;
+    align-items: center;
+    margin-top: 20px;
+  }
+
+  .chart {
+    border: 1px solid #999999;
+    border-radius: 10px;
+  }
+
+  .bottom-button {
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 20px;
+  }
+
+  .plus-button {
+    width: 80px;
+    height: 80px;
+    border: 2px solid #333333;
+    justify-content: center;
+    align-items: center;
+    border-radius: 50%;
+  }
+
+  .plus-symbol {
+    font-size: 48px;
+    color: #333333;
+  }
+</style>

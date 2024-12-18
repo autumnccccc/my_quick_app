@@ -1,8 +1,8 @@
 <template>
   <div class="container">
     <!-- 标题栏 -->
-    <div class="title-bar">
-      <text class="title">Title</text>
+    <div class="title-bar" id="title">
+      <text class="title" id="name">Title</text>
     </div>
 
     <!-- 信息展示部分 -->
@@ -19,13 +19,28 @@
 
     <!-- 图表展示部分 -->
     <div class="chart-section">
-      <canvas id="expenseChart" class="chart" style="width: 300px; height: 200px;"></canvas>
+      <canvas id="expenseChart" class="chart"></canvas>
     </div>
 
     <!-- 添加item按钮 -->
     <div class="bottom-button">
       <div class="plus-button" @click="addNewItem">
         <text class="plus-symbol">+</text>
+      </div>
+    </div>
+
+    <!-- 固定底部操作栏 -->
+    <div class="detail-bom">
+      <div class="bom-top">
+        <div class="info">
+          <text class="volume">大小：{{detail.size}}</text>
+          <text class="author">@{{detail.nickname}}</text>
+        </div>
+        <div class="bizhi-show-fr">
+          <div class="hongbao">
+            <image src="/Common/Image/hongbao.png"></image>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -205,51 +220,39 @@
 </script>
 
 <style>
+  #title {
+      background-color: #15aabf;
+      height: 100px;
+      align-items: center;
+      justify-content: space-between
+  }
+
+  #title #name {
+      font-size: 40px;
+      margin-left: 30px;
+      color: #FFFFFF;
+  }
+
   .container {
     display: flex;
     flex-direction: column;
-    justify-content: space-between;
+    justify-content: flex-start;
     height: 100%;
+    padding: 20px;
     background-color: #ffffff;
   }
 
-  .title-bar {
-    height: 80px;
-    justify-content: center;
-    align-items: center;
-    border: 1px solid #cccccc;
-  }
-
-  .title {
-    font-size: 36px;
-    font-weight: bold;
-  }
-
-  .info-section {
+  .detail-bom {
+    position: fixed;
+    width: 100%;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background-color: rgba(0, 0, 0, 0.8); /* 半透明背景 */
     padding: 20px;
-    border: 1px solid #cccccc;
-  }
-
-  .info-row {
-    flex-direction: row;
-    justify-content: space-between;
-    margin-top: 15px;
-  }
-
-  .label, .value {
-    font-size: 30px;
-    color: #333333;
-  }
-
-  .chart-section {
+    display: flex;
     justify-content: center;
     align-items: center;
-    margin-top: 20px;
-  }
-
-  .chart {
-    border: 1px solid #999999;
-    border-radius: 10px;
   }
 
   .bottom-button {
@@ -261,14 +264,23 @@
   .plus-button {
     width: 80px;
     height: 80px;
-    border: 2px solid #333333;
+    border: 5px solid #ffffff;
     justify-content: center;
     align-items: center;
     border-radius: 50%;
+    background-color: #15aabf;
+    box-shadow: 0 4px 8px rgba(167, 157, 157, 0.1);
   }
 
   .plus-symbol {
     font-size: 48px;
-    color: #333333;
+    color: #ffffff;
+  }
+
+  .info-section {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    height: 100px;
   }
 </style>

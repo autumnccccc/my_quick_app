@@ -1,174 +1,234 @@
 <template>
-    <div class="container">
-      <!-- 返回按钮 -->
-      <div class="header">
-        <div class="back-button" @click="goBack">
-          <text class="back-symbol">←</text>
-        </div>
-        <text class="header-title">添加记录</text>
+  <div class="container">
+    <!-- 返回按钮 -->
+    <div class="header">
+      <div class="back-button" @click="goBack">
+        <text class="back-symbol">←</text>
       </div>
-  
-      <!-- 输入表单 -->
-      <div class="form-group">
-        <text class="label">日期</text>
-        <input type="date" v-model="date" class="input-field" />
+      <text class="header-title">添加记录</text>
+    </div>
+
+    <!-- 输入表单 -->
+    <div class="form-group">
+      <text class="label">日期</text>
+      <input type="date" v-model="date" class="input-field" />
+    </div>
+
+    <div class="form-group">
+      <text class="label">金额</text>
+      <input type="number" v-model="amount" class="input-field" placeholder="请输入金额" />
+    </div>
+
+    <div class="form-group">
+      <text class="label">备注</text>
+      <input type="text" v-model="desc" placeholder="添加备注" @change="updateValue" />
+      <div class="clear-btn" @click="clearDesc"></div>
+      <div class="asr-btn" @click="startAsr"></div>
+    </div>
+
+    <div class="form-group">
+      <text class="label">类型</text>
+      <div class="radio-group">
+        <input type="radio" id="income" v-model="type" value="收入" />
+        <text class="radio-label">收入</text>
       </div>
-      
-      <div class="form-group">
-        <text class="label">金额</text>
-        <input type="number" v-model="amount" class="input-field" placeholder="请输入金额" />
-      </div>
-      
-      <div class="form-group">
-        <text class="label">类型</text>
-        <div class="radio-group">
-          <input type="radio" id="income" v-model="type" value="收入" />
-          <text class="radio-label">收入</text>
-        </div>
-        <div class="radio-group">
-          <input type="radio" id="expense" v-model="type" value="消费" />
-          <text class="radio-label">消费</text>
-        </div>
-      </div>
-      
-        <div class="submit-button">
-          <button @click="submitRecord">提交</button>
-        </div>
+      <div class="radio-group">
+        <input type="radio" id="expense" v-model="type" value="消费" />
+        <text class="radio-label">消费</text>
       </div>
     </div>
-  </template>
+
+    <div class="submit-button">
+      <input onclick="submitRecord" class="buttonClass" value="提交" @touchstart="onButtonPress" @touchend="onButtonRelease"/>
+    </div>
+  </div>
+</template>
+
+
+<script>
+  import storage from '@system.storage';
+  import router from '@system.router';
+  import asr from '@service.asr'
   
-  <script>
-    import storage from '@system.storage';
-    import router from '@system.router';
+  export default {
+    data: {
+      date: '',
+      amount: '',
+      type: '收入',
+      desc: '',
+      buttonClass: '', // 按钮样式控制
+    },
   
-    export default {
-      data: {
-        date: '', // 用户选择的日期
-        amount: '', // 用户输入的金额
-        type: '收入' // 默认记录类型为收入
-      },
+    onInit() {
+      this.initAsr();
+    },
   
-      methods: {
-        // 返回上一个页面
-        goBack() {
-          router.back();
-        },
-  
-        // 提交记录
-        submitRecord() {
-          if (!this.date || !this.amount || isNaN(this.amount)) {
-            this.showError('请填写完整有效的记录');
-            return;
-          }
-  
-          const record = {
-            date: this.date,
-            amount: parseFloat(this.amount),
-            type: this.type,
-          };
-  
-          // 保存数据
-          this.saveRecord(record);
-        },
-  
-        // 显示错误信息
-        showError(message) {
-          // 在页面上弹出错误信息
-          console.error(message);
-          // 你可以用 Toast 或其他方式显示
-        },
-  
-        // 保存记录到本地存储
-        saveRecord(record) {
-          
-        }
+    initAsr() {
+      let that = this;
+      asr.oncompleteresult = ({ result }) => {
+        this.desc = this.descBackUp + `${result}`;
       }
-    };
+    },
+  
+    startAsr() {
+      let that = this;
+      this.descBackUp = this.desc;
+      asr.start({
+        success: function () {
+          vibrator.vibrate({ mode: 'short' });
+          vibrator.vibrate({ mode: 'short' });
+          vibrator.vibrate({ mode: 'short' });
+        },
+        fail: function () {
+          that.$app.$def.makeToast("asr调用失败");
+        }
+      });
+    },
+  
+    submitRecord() {
+      if (!this.date || !this.amount || isNaN(this.amount)) {
+        this.showError('请填写完整有效的记录');
+        return;
+      }
+  
+      const record = {
+        date: this.date,
+        amount: parseFloat(this.amount),
+        type: this.type,
+      };
+  
+      // 保存数据
+      this.saveRecord(record);
+    },
+  
+    updateValue(evt) {
+      this.desc = evt.value;
+    },
+  
+    // 显示错误信息
+    showError(message) {
+      console.error(message);
+      // 在页面上弹出错误信息
+    },
+  
+    saveRecord(record) {
+      // 保存记录到本地存储
+    },
+  
+    goBack() {
+      router.back();
+    },
+  
+    onButtonPress() {
+      this.buttonClass = 'button-pressed';
+    },
+  
+    onButtonRelease() {
+      this.buttonClass = '';
+    }
+  };
   </script>
+
+<style>
+  /* 页面容器 */
+  .container {
+    flex-direction: column;
+    justify-content: flex-start;
+    height: 100%;
+    background-color: #f9f9f9;
+  }
   
-  <style>
-    /* 页面容器 */
-    .container {
-      flex-direction: column;
-      justify-content: flex-start;
-      height: 100%;
-      background-color: #f9f9f9;
-    }
+  /* 顶部返回按钮 */
+  .header {
+    flex-direction: row;
+    justify-content: flex-start;
+    align-items: center;
+    padding: 20px;
+    background-color: #ffffff;
+    border-bottom: 1px solid #cccccc;
+  }
   
-    /* 顶部返回按钮 */
-    .header {
-      flex-direction: row;
-      justify-content: flex-start;
-      align-items: center;
-      padding: 20px;
-      background-color: #ffffff;
-      border-bottom: 1px solid #cccccc;
-    }
+  .back-button {
+    width: 40px;
+    height: 40px;
+    background-color: #15aabf;
+    border-radius: 50%;
+    justify-content: center;
+    align-items: center;
+  }
   
-    .back-button {
-      width: 40px;
-      height: 40px;
-      background-color: #15aabf;
-      border-radius: 50%;
-      justify-content: center;
-      align-items: center;
-    }
+  .back-symbol {
+    color: #ffffff;
+    font-size: 24px;
+  }
   
-    .back-symbol {
-      color: #ffffff;
-      font-size: 24px;
-    }
+  .header-title {
+    font-size: 28px;
+    margin-left: 20px;
+    color: #333333;
+  }
   
-    .header-title {
-      font-size: 28px;
-      margin-left: 20px;
-      color: #333333;
-    }
+  /* 表单部分 */
+  .form-group {
+    margin-bottom: 20px;
+  }
   
-    /* 表单部分 */
-    .form {
-      padding: 20px;
-      background-color: #ffffff;
-    }
+  .label {
+    font-size: 20px;
+    color: #333333;
+  }
   
-    .form-group {
-      margin-bottom: 20px;
-    }
+  .input-field {
+    width: 100%;
+    height: 40px;
+    border: 1px solid #cccccc;
+    border-radius: 8px;
+    padding-left: 10px;
+    font-size: 18px;
+  }
   
-    .label {
-      font-size: 20px;
-      color: #333333;
-    }
+  .radio-group {
+    display: flex;
+    flex-direction: row;
+    justify-content: flex-start;
+    margin-top: 8px;
+  }
   
-    .input-field {
-      width: 100%;
-      height: 40px;
-      border: 1px solid #cccccc;
-      border-radius: 8px;
-      padding-left: 10px;
-      font-size: 18px;
-    }
+  .radio-label {
+    font-size: 20px;
+    margin-right: 15px;
+  }
   
-    .radio-group {
-      flex-direction: row;
-      justify-content: space-between;
-    }
+  .submit-button {
+    margin-top: 20px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
   
-    .submit-button {
-      margin-top: 20px;
-      justify-content: center;
-      align-items: center;
-    }
+  .submit-button button {
+    width: 100%;
+    height: 44px;
+    background-color: #15aabf;
+    color: #ffffff;
+    font-size: 18px;
+    border-radius: 8px;
+    border-width: 0;
+  }
   
-    .submit-button button {
-      width: 100%;
-      height: 40px;
-      background-color: #15aabf;
-      color: #ffffff;
-      font-size: 18px;
-      border-width: 0;  /* 取消边框 */
-      border-radius: 8px;
-    }
+  .button-pressed {
+    background-color: #139a9e; /* 按钮按下时颜色变化 */
+  }
+  
+  /* 清除按钮 */
+  .clear-btn {
+    /* 清除按钮样式 */
+  }
+  
+  /* 语音识别按钮 */
+  .asr-btn {
+    /* 语音识别按钮样式 */
+  }
   </style>
+  
   

@@ -3,6 +3,7 @@
     <!-- 标题栏 -->
     <div class="title-bar" id="title">
       <text class="title" id="name">Title</text>
+      <text class="title" id="name">{{_today}}</text>
     </div>
 
     <!-- 信息展示部分 -->
@@ -24,7 +25,7 @@
 
     <!-- 添加item按钮 -->
     <div class="bottom-button">
-      <div class="plus-button" @click="addNewItem">
+      <div class="plus-button" onclick="addNewItem">
         <text class="plus-symbol">+</text>
       </div>
     </div>
@@ -53,8 +54,8 @@
   export default {
   data: {
     _today: null,
-    currentBalance: '000,000.0',
-    monthlyExpense: '000,000.0',
+    currentBalance: 0.0,
+    monthlyExpense: 0.0,
     inThisMonth: [],
     incomeData: null,
     expenseData: null,
@@ -119,8 +120,12 @@
     this._today = today.toISOString().split('T')[0];
   },
 
-  // 异步初始化数据
   onInit() {
+      // 初始化本月的数据
+      that.initThisMonthDay(); 
+  },
+
+  onShow() {
     let that = this;
 
     // 获取数据的异步操作
@@ -132,11 +137,8 @@
       // 获取到数据后继续执行
       that.incomeData = incomeData;
       that.expenseData = expenseData;
-
-      // 初始化其他数据
-      that.initThisMonthDay(); 
-      that.calculateData();
-      that.drawExpenseChart();
+      that.calculateData()
+      that.drawExpenseChart()
     })
     .catch((error) => {
       console.error("初始化数据失败:", error);
@@ -214,7 +216,17 @@
     });
 
     ctx.stroke();
+  },
+
+  addNewItem() {
+    router.push({
+      uri: "/Add",
+      params: {
+
+      }
+    })
   }
+
 };
 
 </script>

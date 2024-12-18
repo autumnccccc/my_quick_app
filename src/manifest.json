@@ -8,7 +8,7 @@
   "features": [
     { "name": "system.prompt" },
     { "name": "system.shortcut" },
-    { "name": "system.asr" },
+    { "name": "service.asr" },
     { "name": "system.router" },
     { "name": "system.storage" }
   ],

@@ -26,7 +26,7 @@
       <text class="label">备注</text>
       <input type="text" v-model="desc" placeholder="添加备注" value={{desc}} onchange="updateValue"></input>
       <div class="clear-btn" onclick="clearDesc"></div>
-      <input class="asr-btn" type="button" onclick="startAsr"/>
+      <input class="asr-btn asr-image1" type="button" onclick="startAsr"/>
     </div>
 
     <div class="form-group">
@@ -53,11 +53,10 @@
   import storage from '@system.storage';
   import router from '@system.router';
   import asr from '@service.asr'
-  import Detail from '../Detail'
   
   export default {
     data: {
-      amount: 0.0,  // 
+      amount: 0.0,
       type: '',
       desc: '',
       buttonClass: '', // 按钮样式控制
@@ -279,6 +278,14 @@
         margin: 30px 15px 30px 5px;
         border-width: 0px;
         background-image: url("/Common/image/time.png");
+    }
+    .asr-image1 {
+      width: 40px;
+      height: 40px;
+      margin: 30px;
+      border-width: 0px;
+      flex-shrink: 0;
+      background-image: url("/Common/image/asr.png");
     }
   </style>
   

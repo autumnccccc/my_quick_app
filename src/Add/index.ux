@@ -53,7 +53,6 @@
   import storage from '@system.storage';
   import router from '@system.router';
   import asr from '@service.asr'
-  import Detail from '../Detail'
   
   export default {
     data: {
@@ -136,13 +135,69 @@
     this.$app.makeToast(message);
   },
 
+  getOrSetDefaultMyDataMap(key, defaultMap) {
+    storage.get({
+      key,
+      success: (data) => {
+        let dataMap = this.parseData(data);
+        
+        if (dataMap) {
+          this.mergeDefaultData(dataMap, defaultMap);
+          this.saveData(key, dataMap);
+        } else {
+          // 如果解析失败或者没有数据，设置默认数据
+          this.setDefaultData(key, defaultMap);
+        }
+      },
+      fail: (err) => reject("数据获取失败: " + err),
+    });
+  },
+
+  // 合并默认数据到现有的dataMap中
+  mergeDefaultData(dataMap, defaultMap) {
+    Object.entries(defaultMap).forEach(([key, value]) => {
+      // 如果dataMap中没有此key，直接赋值
+      if (!dataMap.hasOwnProperty(key)) {
+        dataMap[key] = value;
+      } else {
+        // 确保dataMap[key]是一个数组
+        if (!Array.isArray(dataMap[key])) {
+          // 如果不是数组，则将其转换为数组
+          dataMap[key] = [dataMap[key]];
+        }
+        // 合并数组
+        dataMap[key] = [...dataMap[key], ...value];
+      }
+    });
+  },
+
+  // 保存数据到storage
+  saveData(key, dataMap) {
+    storage.set({
+      key,
+      value: JSON.stringify(dataMap),
+      success: () => {console.log("提交成功")},
+      fail: (err) => reject("保存数据失败: " + err),
+    });
+  },
+
+  // 设置默认数据到storage
+  setDefaultData(key, defaultMap) {
+    storage.set({
+      key,
+      value: JSON.stringify(defaultMap),
+      success: () => {console.log("提交成功")},
+      fail: (err) => reject("设置默认数据失败: " + err),
+    });
+  },
+
   saveRecord(record) {
     // 保存记录到本地存储
     let key = "order_income_data";
     if (this.type == "expense") key = "order_expense_data";
-    Detail.getOrSetDefaultMyDataMap(key, {[record['date']]: [record['amount']]})
     
-    this.goBack();
+    this.getOrSetDefaultMyDataMap(key, {[record['date']]: [record['amount']]})
+
   },
 
   goBack() {

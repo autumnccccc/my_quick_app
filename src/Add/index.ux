@@ -2,7 +2,7 @@
   <div class="container">
     <!-- 返回按钮 -->
     <div class="header">
-      <div class="back-button" @click="goBack">
+      <div class="back-button" onclick="goBack">
         <text class="back-symbol">←</text>
       </div>
       <text class="header-title">添加记录</text>
@@ -10,124 +10,154 @@
 
     <!-- 输入表单 -->
     <div class="form-group">
-      <text class="label">日期</text>
-      <input type="date" v-model="date" class="input-field" />
+        <text>日期:</text>
+        <div class='time-input'>
+          <picker class='date-picker' type="date" value="{{order_date}}" onchange="getDate"></picker>
+          <div class='date-image'></div>
+        </div>
     </div>
 
     <div class="form-group">
       <text class="label">金额</text>
-      <input type="number" v-model="amount" class="input-field" placeholder="请输入金额" />
+      <input type="number" v-model="amount" class="input-field" placeholder="请输入金额" value={{amount}} onchange="updateAmount"/>
     </div>
 
     <div class="form-group">
       <text class="label">备注</text>
-      <input type="text" v-model="desc" placeholder="添加备注" @change="updateValue" />
-      <div class="clear-btn" @click="clearDesc"></div>
-      <div class="asr-btn" @click="startAsr"></div>
+      <input type="text" v-model="desc" placeholder="添加备注" value={{desc}} onchange="updateValue"></input>
+      <div class="clear-btn" onclick="clearDesc"></div>
+      <input class="asr-btn" type="button" onclick="startAsr"/>
     </div>
 
     <div class="form-group">
       <text class="label">类型</text>
       <div class="radio-group">
-        <input type="radio" id="income" v-model="type" value="收入" />
+        <input type="radio" id="income" v-model="type" value='收入' onclick="changeTypeToInc"/>
         <text class="radio-label">收入</text>
       </div>
       <div class="radio-group">
-        <input type="radio" id="expense" v-model="type" value="消费" />
+        <input type="radio" id="expense" v-model="type" value="消费" onclick="changeTypeToExp"/>
         <text class="radio-label">消费</text>
       </div>
     </div>
 
     <div class="submit-button">
-      <input onclick="submitRecord" class="buttonClass" value="提交" @touchstart="onButtonPress" @touchend="onButtonRelease"/>
+      <input onclick="submitRecord" class="buttonClass" type="button"
+       value="提交" ontouchstart="onButtonPress" ontouchend="onButtonRelease"/>
     </div>
   </div>
 </template>
-
+  import 
 
 <script>
   import storage from '@system.storage';
   import router from '@system.router';
   import asr from '@service.asr'
+  import Detail from '../Detail'
   
   export default {
     data: {
-      date: '',
-      amount: '',
-      type: '收入',
+      amount: 0.0,  // 
+      type: '',
       desc: '',
       buttonClass: '', // 按钮样式控制
+      order_date: '', // 记录时间
     },
   
-    onInit() {
+  onInit() {
+      const date = new Date();
+      const Y = date.getFullYear();
+      const M = date.getMonth() + 1;
+      const D = date.getDate();
+      this.order_date = Y + '-' + M + '-' + D;
       this.initAsr();
-    },
-  
-    initAsr() {
-      let that = this;
-      asr.oncompleteresult = ({ result }) => {
-        this.desc = this.descBackUp + `${result}`;
-      }
-    },
-  
-    startAsr() {
-      let that = this;
-      this.descBackUp = this.desc;
-      asr.start({
-        success: function () {
-          vibrator.vibrate({ mode: 'short' });
-          vibrator.vibrate({ mode: 'short' });
-          vibrator.vibrate({ mode: 'short' });
-        },
-        fail: function () {
-          that.$app.$def.makeToast("asr调用失败");
-        }
-      });
-    },
-  
-    submitRecord() {
-      if (!this.date || !this.amount || isNaN(this.amount)) {
-        this.showError('请填写完整有效的记录');
-        return;
-      }
-  
-      const record = {
-        date: this.date,
-        amount: parseFloat(this.amount),
-        type: this.type,
-      };
-  
-      // 保存数据
-      this.saveRecord(record);
-    },
-  
-    updateValue(evt) {
-      this.desc = evt.value;
-    },
-  
-    // 显示错误信息
-    showError(message) {
-      console.error(message);
-      // 在页面上弹出错误信息
-    },
-  
-    saveRecord(record) {
-      // 保存记录到本地存储
-    },
-  
-    goBack() {
-      router.back();
-    },
-  
-    onButtonPress() {
-      this.buttonClass = 'button-pressed';
-    },
-  
-    onButtonRelease() {
-      this.buttonClass = '';
+  },
+
+  initAsr() {
+    let that = this;
+    asr.oncompleteresult = ({ result }) => {
+      this.desc = this.descBackUp + `${result}`;
     }
-  };
-  </script>
+  },
+
+  startAsr() {
+    let that = this;
+    this.descBackUp = this.desc;
+    asr.start({
+      success: function () {
+        vibrator.vibrate({ mode: 'short' });
+        vibrator.vibrate({ mode: 'short' });
+        vibrator.vibrate({ mode: 'short' });
+      },
+      fail: function () {
+        that.$app.$def.makeToast("asr调用失败");
+      }
+    });
+  },
+
+  getDate(e) {
+    this.order_date = e.year + '-' + (e.month + 1) + '-' + e.day
+  },
+
+  changeTypeToExp() {
+    this.type = 'expense';
+  },
+
+  changeTypeToInc() {
+    this.type = 'income';
+  },
+
+  submitRecord() {
+    if (!this.order_date || !this.amount || isNaN(this.amount)) {
+      this.showError('请填写完整有效的记录');
+      return;
+    }
+
+    const record = {
+      'date': this.order_date,
+      'amount': parseFloat(this.amount),
+      'type': this.type,
+    };
+
+    // 保存数据
+    this.saveRecord(record);
+  },
+
+  updateValue(evt) {
+    this.desc = evt.value;
+  },
+
+  updateAmount(evt) {
+    this.amount = evt.value;
+  },
+
+  showError(message) {
+    // 在页面上弹出错误信息
+    this.$app.makeToast(message);
+  },
+
+  saveRecord(record) {
+    // 保存记录到本地存储
+    let key = "order_income_data";
+    if (this.type == "expense") key = "order_expense_data";
+    Detail.getOrSetDefaultMyDataMap(key, {[record['date']]: [record['amount']]})
+    
+    this.goBack();
+  },
+
+  goBack() {
+    router.back();
+  },
+
+  onButtonPress() {
+    this.buttonClass = 'button-pressed';
+  },
+
+  onButtonRelease() {
+    this.buttonClass = '';
+  }
+};
+</script>
 
 <style>
   /* 页面容器 */
@@ -229,6 +259,27 @@
   .asr-btn {
     /* 语音识别按钮样式 */
   }
+
+  .time-picker {
+        width: 100px;
+        margin-left: 10px;
+        flex: 0;
+        font-family: myfont, serif;
+    }
+    .date-image {
+        width: 40px;
+        height: 40px;
+        margin: 30px 25px 30px 5px;
+        border-width: 0px;
+        background-image: url("/Common/image/calendar.png");
+    }
+    .time-image {
+        width: 40px;
+        height: 40px;
+        margin: 30px 15px 30px 5px;
+        border-width: 0px;
+        background-image: url("/Common/image/time.png");
+    }
   </style>
   
   

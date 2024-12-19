@@ -3,7 +3,7 @@
     <!-- 标题栏 -->
     <div class="title-bar" id="title">
       <text class="title" id="name">Title</text>
-      <text class="title" id="name">{{_today}}</text>
+      <text class="title" id="name">{{today}}</text>
     </div>
 
     <!-- 信息展示部分 -->
@@ -12,6 +12,7 @@
         <text class="label">当前余额</text>
         <text class="value">{{ currentBalance }}元</text>
       </div>
+      <div class="divider"></div>
       <div class="info-row">
         <text class="label">本月开销</text>
         <text class="value">{{ monthlyExpense }}元</text>
@@ -19,8 +20,9 @@
     </div>
 
     <!-- 图表展示部分 -->
-    <div class="chart-section">
-      <canvas id="expenseChart" class="chart"></canvas>
+    <div class='canvas-container'>
+      <text class='canvas-text'>消费折线图:</text>
+      <canvas id='line-expense'></canvas>
     </div>
 
     <!-- 添加item按钮 -->
@@ -29,31 +31,16 @@
         <text class="plus-symbol">+</text>
       </div>
     </div>
-
-    <!-- 固定底部操作栏 -->
-    <div class="detail-bom">
-      <div class="bom-top">
-        <div class="info">
-          <text class="volume">大小：{{detail.size}}</text>
-          <text class="author">@{{detail.nickname}}</text>
-        </div>
-        <div class="bizhi-show-fr">
-          <div class="hongbao">
-            <image src="/Common/Image/hongbao.png"></image>
-          </div>
-        </div>
-      </div>
-    </div>
   </div>
 </template>
 
 <script>
   import storage from '@system.storage'
   import router from '@system.router'
-
+  
   export default {
   data: {
-    _today: null,
+    today: null,
     currentBalance: 0.0,
     monthlyExpense: 0.0,
     inThisMonth: [],
@@ -62,43 +49,86 @@
     realData: {}  // 只记录本月的
   },
 
-  // 获取或设置默认的数据映射
+  // 获取并更新数据的核心函数
   getOrSetDefaultMyDataMap(key, defaultMap) {
-    const defaultObject = Object.fromEntries(defaultMap);
-
     return new Promise((resolve, reject) => {
       storage.get({
         key,
         success: (data) => {
-          try {
-            const map = new Map(Object.entries(JSON.parse(data)));
-            console.log(`${key} 读取成功:`, map);
-            resolve(map);  // 返回解析成功的 Map
-          } catch (error) {
-            console.error(`解析 ${key} 失败:`, error);
-            reject(error);
+          let dataMap = this.parseData(data);
+          
+          if (dataMap) {
+            // 合并默认数据
+            this.mergeDefaultData(dataMap, defaultMap);
+            // 更新存储中的数据
+            this.saveData(key, dataMap)
+              .then(() => resolve(dataMap))
+              .catch(reject);
+          } else {
+            // 如果解析失败或者没有数据，设置默认数据
+            this.setDefaultData(key, defaultMap)
+              .then(() => resolve(defaultMap))
+              .catch(reject);
           }
         },
-        fail: () => {
-          console.log(`${key} 不存在，设置为默认值`);
-          storage.set({
-            key,
-            value: JSON.stringify(defaultObject),
-            success: () => {
-              console.log(`默认 ${key} 存储成功`);
-              resolve(defaultMap);  // 返回默认的 Map
-            },
-            fail: (err) => {
-              console.error(`默认 ${key} 存储失败`, err);
-              reject(err);
-            },
-          });
-        },
+        fail: (err) => reject("数据获取失败: " + err),
       });
     });
   },
 
-  // 初始化本月日期
+  // 解析存储的数据
+  parseData(data) {
+    try {
+      return JSON.parse(data);
+    } catch (error) {
+      console.log('解析数据失败:', error);
+      return null;
+    }
+  },
+
+  // 合并默认数据到现有的dataMap中
+  mergeDefaultData(dataMap, defaultMap) {
+    Object.entries(defaultMap).forEach(([key, value]) => {
+      // 如果dataMap中没有此key，直接赋值
+      if (!dataMap.hasOwnProperty(key)) {
+        dataMap[key] = value;
+      } else {
+        // 确保dataMap[key]是一个数组
+        if (!Array.isArray(dataMap[key])) {
+          // 如果不是数组，则将其转换为数组
+          dataMap[key] = [dataMap[key]];
+        }
+        // 合并数组
+        dataMap[key] = [...dataMap[key], ...value];
+      }
+    });
+  },
+
+  // 保存数据到storage
+  saveData(key, dataMap) {
+    return new Promise((resolve, reject) => {
+      storage.set({
+        key,
+        value: JSON.stringify(dataMap),
+        success: resolve,
+        fail: (err) => reject("保存数据失败: " + err),
+      });
+    });
+  },
+
+  // 设置默认数据到storage
+  setDefaultData(key, defaultMap) {
+    return new Promise((resolve, reject) => {
+      storage.set({
+        key,
+        value: JSON.stringify(defaultMap),
+        success: resolve,
+        fail: (err) => reject("设置默认数据失败: " + err),
+      });
+    });
+  },
+
+// 初始化本月日期
   initThisMonthDay() {
     const today = new Date();
     const year = today.getFullYear(); // 获取当前年份
@@ -117,12 +147,17 @@
     }
 
     this.inThisMonth = dates;
-    this._today = today.toISOString().split('T')[0];
+    this.today = today.toISOString().split('T')[0];
   },
 
   onInit() {
-      // 初始化本月的数据
-      that.initThisMonthDay(); 
+    // 初始化本月的数据
+    storage.clear();
+    Promise.all([
+      this.getOrSetDefaultMyDataMap("order_income_data", {'1970-01-01': [1]}),
+      this.getOrSetDefaultMyDataMap("order_expense_data", {'1970-01-01': [2]})
+    ]).then().catch();
+    this.initThisMonthDay(); 
   },
 
   onShow() {
@@ -130,13 +165,14 @@
 
     // 获取数据的异步操作
     Promise.all([
-      this.getOrSetDefaultMyDataMap("order_income_data", new Map([['1970-1-1', 0]])),
-      this.getOrSetDefaultMyDataMap("order_expense_data", new Map([['1970-1-1', 0]]))
+      this.getOrSetDefaultMyDataMap("order_income_data", {}),
+      this.getOrSetDefaultMyDataMap("order_expense_data", {})
     ])
     .then(([incomeData, expenseData]) => {
       // 获取到数据后继续执行
-      that.incomeData = incomeData;
-      that.expenseData = expenseData;
+      console.log("获取到数据inc,expense:", incomeData, expenseData);
+      that.incomeData = new Map(Object.entries(incomeData));
+      that.expenseData = new Map(Object.entries(expenseData));
       that.calculateData()
       that.drawExpenseChart()
     })
@@ -159,11 +195,15 @@
 
       this.realData[_date] = sum_in - sum_exp;
     }
+
+    this.realData = {"2024-12-01": 99999};  // for test
+
+    console.log("数据计算完成：", this.realData);
   },
 
   // 绘制消费折线图
   drawExpenseChart() {
-    const ctx = this.$element('expenseChart').getContext('2d');
+    const ctx = this.$element('line-expense').getContext('2d');
     const days = this.inThisMonth; // 获取当月所有的日期
     const realData = this.realData; // 获取当月的实际数据
     const canvasWidth = 600;
@@ -225,7 +265,7 @@
 
       }
     })
-  }
+  },
 
 };
 
@@ -236,13 +276,15 @@
       background-color: #15aabf;
       height: 100px;
       align-items: center;
-      justify-content: space-between
+      justify-content: space-between;
+      display: flex;
+      padding: 0 20px;
   }
 
   #title #name {
-      font-size: 40px;
-      margin-left: 30px;
+      font-size: 30px;
       color: #FFFFFF;
+      font-weight: bold;
   }
 
   .container {
@@ -251,23 +293,38 @@
     justify-content: flex-start;
     height: 100%;
     padding: 20px;
-    background-color: #ffffff;
+    background-color: #f7f7f7;
   }
 
-  .detail-bom {
-    position: fixed;
-    width: 100%;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    background-color: rgba(0, 0, 0, 0.8); /* 半透明背景 */
-    padding: 20px;
+  .info-section {
+    margin-top: 20px;
+    padding: 10px 0;
+  }
+
+  .info-row {
     display: flex;
-    justify-content: center;
-    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 15px;
+  }
+
+  .label {
+    font-size: 16px;
+    color: #333;
+  }
+
+  .value {
+    font-size: 16px;
+    font-weight: bold;
+    color: #15aabf;
+  }
+
+  .chart-section {
+    margin-top: 20px;
+    margin-bottom: 30px;
   }
 
   .bottom-button {
+    display: flex;
     justify-content: center;
     align-items: center;
     margin-bottom: 20px;
@@ -276,23 +333,74 @@
   .plus-button {
     width: 80px;
     height: 80px;
-    border: 5px solid #ffffff;
+    border: 5px solid #fff;
     justify-content: center;
     align-items: center;
     border-radius: 50%;
     background-color: #15aabf;
     box-shadow: 0 4px 8px rgba(167, 157, 157, 0.1);
+    cursor: pointer;
   }
 
   .plus-symbol {
-    font-size: 48px;
-    color: #ffffff;
+    font-size: 40px;
+    color: #fff;
   }
 
-  .info-section {
+  .detail-bom {
+    position: fixed;
+    bottom: 0;
+    width: 100%;
+    left: 0;
+    padding: 15px;
+    background-color: rgba(0, 0, 0, 0.8);
+    color: #fff;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .info {
     display: flex;
     flex-direction: column;
-    justify-content: flex-start;
-    height: 100px;
   }
+
+  .volume, .author {
+    font-size: 14px;
+    color: #fff;
+  }
+
+  .hongbao {
+    width: 40px;
+    height: 40px;
+  }
+
+  .hongbao image {
+    width: 100%;
+    height: 100%;
+  }
+  
+  .analyze-page {
+  background-color: rgb(243, 245, 250);
+  flex-direction: column;
+}
+
+  .canvas-container {
+    flex: 1;
+    flex-direction: column;
+  }
+
+  #line-expense {
+    height: 350px;
+    width: 750px;
+  }
+
+  .canvas-text {
+    height: 70px;
+    font-size: 30px;
+    margin-left: 50px;
+    padding-top: 30px;
+    font-family: myfont, serif;
+  }
+
 </style>

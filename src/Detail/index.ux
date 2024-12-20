@@ -26,16 +26,30 @@
     </div>
 
     <!-- 列表部分 -->
-    
+    <div class="item-container">
+      <div class="item-list">
+        <!-- 使用 block 和 for 渲染列表 -->
+        <block for="{{record_list}}">
+          <div class="micro-text" :key="{{$idx}}">
+            <text class="text1">{{$item.date}}</text>
+            <text class="text2">{{$item.type}}</text>
+            <text class="text2">{{$item.amount}}元</text>
+            <!-- 确保 comment 字段存在，如果不存在则显示默认值 -->
+            <text class="text2">{{$item.comment || '暂无评论'}}</text>
+          </div>
+        </block>
+      </div>
+    </div>
 
     <!-- 添加item按钮 -->
     <div class="bottom-button">
-      <div class="plus-button" onclick="addNewItem">
+      <div class="plus-button" @click="addNewItem">
         <text class="plus-symbol">+</text>
       </div>
     </div>
   </div>
 </template>
+
 
 <script>
   import storage from '@system.storage'
@@ -50,7 +64,7 @@
     incomeData: null,
     expenseData: null,
     realData: {},  // 只记录本月的
-    record_list: null
+    record_list: []
   },
 
   // 获取并更新数据的核心函数
@@ -159,9 +173,9 @@
     storage.get({
       key: 'record_list',
       success: (records) => {
-        if (records === null || records === undefined) {
+        if (!records) {
           console.log("初始化list");
-          storage.set({key: record_list, value: [], fail: (err) => {console.log("list初始化失败", err)}});
+          storage.set({key: 'record_list', value: [], fail: (err) => {console.log("list初始化失败", err)}});
         }
       }
     })
@@ -201,15 +215,22 @@
     storage.get({
       key: 'record_list',
       success: function (data) {
-        that.getRecords(data);
+        that.getRecordsAndShow(data);
       },
-      fail:
-        console.log("获取records失败")
-    })
+      fail: function () {
+        console.log("获取records失败");
+      }
+    });
   },
 
-  getRecords(recordsList) {
-    this.record_list = recordsList;
+  getRecordsAndShow(recordsList) {
+    if (recordsList) {
+      let listTmp = JSON.parse(recordsList);
+      this.record_list = listTmp;
+      console.log("获取列表成功！", this.record_list);
+    } else {
+      this.record_list = [];  // 如果没有数据，设置为空数组
+    }
   },
 
   // 计算数据
@@ -217,17 +238,19 @@
     if (!this.incomeData || !this.expenseData) return;
 
     // 计算营收
-    for (const _date of this.inThisMonth) {
-      const _value_in = this.incomeData.get(_date) || [];
-      const _value_exp = this.expenseData.get(_date) || [];
+    for (const dateTmp of this.inThisMonth) {
+      const _value_in = this.incomeData.get(dateTmp) || [];
+      const _value_exp = this.expenseData.get(dateTmp) || [];
       // 计算当天的总开销、收入
       const sum_in = _value_in.reduce((acc, cur) => acc + cur, 0);
       const sum_exp = _value_exp.reduce((acc, cur) => acc + cur, 0);
 
-      this.realData[_date] = sum_in - sum_exp;
+      console.log("计算完成：", sum_exp, sum_in);
+
+      this.realData[dateTmp] = sum_in - sum_exp;
     }
 
-    this.realData = {"2024-12-01": 99999};  // for test
+    // this.realData = {"2024-12-01": 99999};  // for test
 
     console.log("数据计算完成：", this.realData);
   },
@@ -303,6 +326,8 @@
 </script>
 
 <style>
+  @import "../Common/css/font.css";
+
   #title {
       background-color: #15aabf;
       height: 100px;
@@ -432,6 +457,35 @@
     margin-left: 50px;
     padding-top: 30px;
     font-family: myfont, serif;
+  }
+
+  .item-list {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .micro-text {
+    display: flex;
+    flex-direction: column;
+    padding: 15px;
+    margin-bottom: 10px;
+    background-color: #ffffff;
+    border: 1px solid #eceef5;
+    border-radius: 10px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  }
+
+  .text1 {
+    font-size: 18px;
+    font-weight: bold;
+    color: #333;
+    margin-bottom: 8px;
+  }
+
+  .text2 {
+    font-size: 16px;
+    color: #666;
+    margin-bottom: 5px;
   }
 
 </style>

@@ -52,7 +52,7 @@
 <script>
   import storage from '@system.storage';
   import router from '@system.router';
-  import asr from '@service.asr'
+  import asr from '@service.asr';
   
   export default {
     data: {
@@ -99,10 +99,12 @@
   },
 
   changeTypeToExp() {
+    console.log("切换为exp");
     this.type = 'expense';
   },
 
   changeTypeToInc() {
+    console.log("切换为inc");
     this.type = 'income';
   },
 
@@ -116,10 +118,45 @@
       'date': this.order_date,
       'amount': parseFloat(this.amount),
       'type': this.type,
+      'comment': this.desc
     };
 
+    console.log("+++record", record);
     // 保存数据
     this.saveRecord(record);
+  },
+
+  saveRecord(record) {
+    // 保存记录到本地存储
+    let typeKey = "order_income_data";
+    if (this.type == "expense") typeKey = "order_expense_data";
+    
+    this.getOrSetDefaultMyDataMap(typeKey, {[record['date']]: [record['amount']]})
+
+    storage.get({
+      key: 'record_list',
+      success: (data) => {
+        let record_list = JSON.parse(data);
+        record_list.push({
+          'date': record['date'],
+          'amount': record['amount'],
+          'type': record['type'],
+          'comment': record['comment']
+        });
+        storage.set({
+          key: 'record_list',
+          value: record_list,
+          success:() => {
+            console.log("recordlist 存储成功");
+          },
+          fail: (err) => {
+            console.log("recordlist 存储失败");
+          }
+        })
+      }
+    });
+
+    console.log("提交成功");
   },
 
   updateValue(evt) {
@@ -135,11 +172,22 @@
     this.$app.makeToast(message);
   },
 
+   // 解析存储的数据
+  parseData(data) {
+    try {
+      return JSON.parse(data);
+    } catch (error) {
+      console.log('解析数据失败:', error);
+      return null;
+    }
+  },
+
   getOrSetDefaultMyDataMap(key, defaultMap) {
+    let that = this;
     storage.get({
       key,
       success: (data) => {
-        let dataMap = this.parseData(data);
+        let dataMap = that.parseData(data);
         
         if (dataMap) {
           this.mergeDefaultData(dataMap, defaultMap);
@@ -189,15 +237,6 @@
       success: () => {console.log("提交成功")},
       fail: (err) => reject("设置默认数据失败: " + err),
     });
-  },
-
-  saveRecord(record) {
-    // 保存记录到本地存储
-    let key = "order_income_data";
-    if (this.type == "expense") key = "order_expense_data";
-    
-    this.getOrSetDefaultMyDataMap(key, {[record['date']]: [record['amount']]})
-
   },
 
   goBack() {

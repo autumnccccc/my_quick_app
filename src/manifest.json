@@ -10,7 +10,8 @@
     { "name": "system.shortcut" },
     { "name": "service.asr" },
     { "name": "system.router" },
-    { "name": "system.storage" }
+    { "name": "system.storage" },
+    { "name": "system.vibrator"}
   ],
   "permissions": [
     { "origin": "*" }

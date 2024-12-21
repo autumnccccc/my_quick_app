@@ -131,8 +131,10 @@
     let typeKey = "order_income_data";
     if (this.type == "expense") typeKey = "order_expense_data";
     
+    // 存储到map
     this.getOrSetDefaultMyDataMap(typeKey, {[record['date']]: [record['amount']]})
-
+    
+    // 存储到list
     storage.get({
       key: 'record_list',
       success: (data) => {
@@ -154,6 +156,19 @@
           }
         })
       }
+    });
+    
+    // 通知主页面更新数据展示
+    // index-0 表示income，index-1表示expense
+    let tmpAmount = [];
+    if (typeKey === 'order_income_data')
+      tmpAmount = [record['amount'], 0];
+    else
+      tmpAmount = [0, record['amount']];
+
+    this.$dispatch("updateAmountData", {
+      income: tmpAmount[0],
+      expense: tmpAmount[1]
     });
 
     console.log("提交成功");

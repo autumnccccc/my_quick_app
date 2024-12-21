@@ -2,20 +2,20 @@
   <div class="container">
     <!-- 标题栏 -->
     <div class="title-bar" id="title">
-      <text class="title" id="name">记账</text>
+      <text class="title" id="name">Title</text>
       <text class="title" id="name">{{today}}</text>
     </div>
 
     <!-- 信息展示部分 -->
     <div class="info-section">
       <div class="info-row">
-        <text class="label">本月总收入</text>
-        <text class="value">{{currentIncome}}元 </text>
+        <text class="label">当前余额</text>
+        <text class="value">{{ currentBalance }}元</text>
       </div>
       <div class="divider"></div>
       <div class="info-row">
-        <text class="label">本月总开销</text>
-        <text class="value">{{currentExpense}}元</text>
+        <text class="label">本月开销</text>
+        <text class="value">{{ monthlyExpense }}元</text>
       </div>
     </div>
 
@@ -27,21 +27,18 @@
 
     <!-- 列表部分 -->
     <div class="item-container">
-      <list class="micro-list" scroll-y="true">
+      <div class="item-list">
         <!-- 使用 block 和 for 渲染列表 -->
         <block for="{{record_list}}">
-          <list-item class="micro-text item" type="item" :key="{{$idx}}">
+          <div class="micro-text" :key="{{$idx}}">
             <text class="text1">{{$item.date}}</text>
             <text class="text2">{{$item.type}}</text>
             <text class="text2">{{$item.amount}}元</text>
             <!-- 确保 comment 字段存在，如果不存在则显示默认值 -->
             <text class="text2">{{$item.comment || '暂无评论'}}</text>
-          </list-item>
-          <list-item class="micro-btn" type="item">
-            <div class="cancle-btn" @click="deleteItem($idx)"></div>
-          </list-item>
+          </div>
         </block>
-      </list>
+      </div>
     </div>
 
     <!-- 添加item按钮 -->
@@ -53,6 +50,7 @@
   </div>
 </template>
 
+
 <script>
   import storage from '@system.storage'
   import router from '@system.router'
@@ -60,8 +58,8 @@
   export default {
   data: {
     today: null,
-    currentIncome: 0.0,
-    currentExpense: 0.0,
+    currentBalance: 0.0,
+    monthlyExpense: 0.0,
     inThisMonth: [],
     incomeData: null,
     expenseData: null,
@@ -148,7 +146,7 @@
     });
   },
 
-  // 初始化本月日期
+// 初始化本月日期
   initThisMonthDay() {
     const today = new Date();
     const year = today.getFullYear(); // 获取当前年份
@@ -192,18 +190,6 @@
     ]).then().catch();
     this.initThisMonthDay(); 
     this.init_list();
-
-    // // 监听消费收入数据
-    // this.$on("updateAmountData", (data) => {
-    //   console.log("===== 获取到消费/收入数据", data.detail.income, data.detail.expense);
-    //   this.currentIncome += data.detail.income;
-    //   this.currentExpense += data.detail.expense;
-    // });
-
-  },
-
-  onDestory() {
-    // this.$off("updateAmountData");
   },
 
   onShow() {
@@ -250,8 +236,6 @@
   // 计算数据
   calculateData() {
     if (!this.incomeData || !this.expenseData) return;
-    this.currentIncome = 0;
-    this.currentExpense = 0;
 
     // 计算营收
     for (const dateTmp of this.inThisMonth) {
@@ -264,8 +248,6 @@
       console.log("计算完成：", sum_exp, sum_in);
 
       this.realData[dateTmp] = sum_in - sum_exp;
-      this.currentIncome += sum_in;
-      this.currentExpense += sum_exp;
     }
 
     // this.realData = {"2024-12-01": 99999};  // for test
@@ -339,253 +321,171 @@
     })
   },
 
-  deleteItem(idx) {
-    let that = this;
-    let item = {};
-    storage.get({
-      key: 'record_list',
-      success: (records) => {
-        let record_list = JSON.parse(records);
-        item = JSON.parse(records)[idx];  // 模拟深拷贝
-        // remove element
-        if (idx < record_list.length) {
-          record_list.splice(idx, 1);
-        } else return;
-
-        that.record_list = record_list;
-        storage.set({
-          key: 'record_list',
-          value: record_list,
-          success: () => {},
-          fail: () => {}
-        });
-      },
-      fail: (err) => {
-        console.log("列表元素删除失败: ",err);
-      }
-    });
-    // 再从map里移除这个item
-    let typeKey = 'order_income_data';
-    if (item.type == 'expense') typeKey = 'order_expense_data';
-    storage.get({
-      key: typeKey,
-      success: (data) => {
-        let myDefaultMap = that.parseData(data);
-        that.removeFromMap(myDefaultMap, item);
-
-        storage.set({
-          key: typeKey,
-          value: JSON.stringify(myDefaultMap),
-          success: () => {
-            // 可以添加模拟刷新的操作
-          }
-        });
-      }
-    });
-  },
-
-  removeFromMap(itemDefaultMap, target) {
-    // 获取date对应的消费list
-    let tmp = new Date(target.date);
-    let key = tmp.toISOString().split('T')[0];
-
-    let amountList = itemDefaultMap[key];
-
-    if (!amountList || amountList.length === 0)
-      return;
-
-      // 删除一个等值的记录
-    for (let i = 0; i < amountList.length; i++) {
-      if (amountList[i] == target.amount) {
-        amountList.splice(i, 1);
-        break;
-      }
-    }
-  }
-
 };
 
 </script>
 
-<style lang="less">
-@import "../Common/css/font.css";
+<style>
+  @import "../Common/css/font.css";
 
-#title {
-    background-color: #15aabf;
-    height: 100px;
-    align-items: center;
-    justify-content: space-between;
+  #title {
+      background-color: #15aabf;
+      height: 100px;
+      align-items: center;
+      justify-content: space-between;
+      display: flex;
+      padding: 0 20px;
+  }
+
+  #title #name {
+      font-size: 30px;
+      color: #FFFFFF;
+      font-weight: bold;
+  }
+
+  .container {
     display: flex;
-    padding: 0 20px;
-}
+    flex-direction: column;
+    justify-content: flex-start;
+    height: 100%;
+    padding: 20px;
+    background-color: #f7f7f7;
+  }
 
-#title #name {
-    font-size: 30px;
-    color: #FFFFFF;
+  .info-section {
+    margin-top: 20px;
+    padding: 10px 0;
+  }
+
+  .info-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 15px;
+  }
+
+  .label {
+    font-size: 16px;
+    color: #333;
+  }
+
+  .value {
+    font-size: 16px;
     font-weight: bold;
-}
+    color: #15aabf;
+  }
 
-.container {
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-start;
-  height: 100%;
-  padding: 20px;
-  background-color: #ffffff;
-}
+  .chart-section {
+    margin-top: 20px;
+    margin-bottom: 30px;
+  }
 
-.info-section {
-  margin-top: 20px;
-  padding: 10px 0;
-}
+  .bottom-button {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 20px;
+  }
 
-.info-row {
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 15px;
-}
+  .plus-button {
+    width: 80px;
+    height: 80px;
+    border: 5px solid #fff;
+    justify-content: center;
+    align-items: center;
+    border-radius: 50%;
+    background-color: #15aabf;
+    box-shadow: 0 4px 8px rgba(167, 157, 157, 0.1);
+    cursor: pointer;
+  }
 
-.label {
-  font-size: 16px;
-  color: #333;
-}
+  .plus-symbol {
+    font-size: 40px;
+    color: #fff;
+  }
 
-.value{
-  font-size: 16px;
-  font-weight: bold;
-  color: #15aabf;
-}
+  .detail-bom {
+    position: fixed;
+    bottom: 0;
+    width: 100%;
+    left: 0;
+    padding: 15px;
+    background-color: rgba(0, 0, 0, 0.8);
+    color: #fff;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
 
-.bottom-button {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  margin-bottom: 20px;
-}
+  .info {
+    display: flex;
+    flex-direction: column;
+  }
 
-.plus-button {
-  width: 80px;
-  height: 80px;
-  border: 5px solid #fff;
-  justify-content: center;
-  align-items: center;
-  border-radius: 50%;
-  background-color: #15aabf;
-  box-shadow: 0 4px 8px rgba(167, 157, 157, 0.1);
-  cursor: pointer;
-}
+  .volume, .author {
+    font-size: 14px;
+    color: #fff;
+  }
 
-.plus-symbol {
-  font-size: 40px;
-  color: #fff;
-}
+  .hongbao {
+    width: 40px;
+    height: 40px;
+  }
 
-.info {
-  display: flex;
-  flex-direction: column;
-}
-
-.canvas-container {
-  flex: 1;
-  flex-direction: column;
-}
-
-#line-expense {
-  height: 350px;
-  width: 750px;
-}
-
-.canvas-text {
-  height: 70px;
-  font-size: 30px;
-  margin-left: 50px;
-  padding-top: 30px;
-  font-family: myfont, serif;
-}
-
-.item {
-  flex: 1;
-  height: 250px; /* 增大高度 */
-  width: 700px;
-  margin-bottom: 1px; /* 增加底部间距 */
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  padding: 15px;
-}
-
-/* 修改列表样式 */
-.item-list {
-  display: flex;
-  flex-direction: column;
-  height: 500px; /* 高度可以根据需要调整 */
-  overflow-y: scroll; /* 支持纵向滚动 */
-}
-
-.micro-list {
-  flex: 1;
-  height: 30%; 
-  display: flex;
-  flex-direction: row;
-  flex-wrap: wrap;
-  justify-content: space-between; /* 让内容分布更加均匀 */
-}
-
-.micro-text {
-  flex: 2;
-  height: 100%;
-  margin-left: 15px;
-  margin-right: 15px;
-  flex-grow: 0;
-  background-color: #ffffff;
-  border: 1px solid rgb(238, 240, 245);
-  border-radius: 20px;
-  padding: 15px; /* 增加内边距 */
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-}
-
-.text1 {
-  flex: 1;
-  height: 100%;
-  color: #333; /* 深色文字 */
-  font-size: 35px; /* 增大字体 */
-  line-height: 1.5; /* 增加行高，提升可读性 */
-  border-width: 0;
-  border-style: solid;
-  border-color: transparent;
-  padding: 10px;
-  background-color: #f7f7f7; /* 背景色更柔和 */
-  border-radius: 15px; /* 增加圆角效果 */
-  display: flex;
+  .hongbao image {
+    width: 100%;
+    height: 100%;
+  }
+  
+  .analyze-page {
+  background-color: rgb(243, 245, 250);
   flex-direction: column;
 }
 
-.text2 {
-  width: 320px;
-  font-size: 18px; /* 字体略微增大 */
-  margin-right: 30px;
-  font-family: myfont, serif;
-  color: #666; /* 字体颜色更柔和 */
-}
+  .canvas-container {
+    flex: 1;
+    flex-direction: column;
+  }
 
-.cancle-btn {
-  width: 50px; /* 按钮宽度 */
-  height: 50px; /* 按钮高度 */
-  margin-bottom: 10px; /* 按钮之间的间距 */
-  background-size: cover;
-  border-radius: 10px; /* 圆角按钮 */
-  background-position: center;
-  background-image: url("/Common/image/cancle.png");
-}
+  #line-expense {
+    height: 350px;
+    width: 750px;
+  }
 
-.micro-btn {
-  flex: 0;
-  display: flex;
-  flex-direction: column; 
-  justify-content: center;
-  height: 240px;
-  width: 120px;
-}
+  .canvas-text {
+    height: 70px;
+    font-size: 30px;
+    margin-left: 50px;
+    padding-top: 30px;
+    font-family: myfont, serif;
+  }
+
+  .item-list {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .micro-text {
+    display: flex;
+    flex-direction: column;
+    padding: 15px;
+    margin-bottom: 10px;
+    background-color: #ffffff;
+    border: 1px solid #eceef5;
+    border-radius: 10px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  }
+
+  .text1 {
+    font-size: 18px;
+    font-weight: bold;
+    color: #333;
+    margin-bottom: 8px;
+  }
+
+  .text2 {
+    font-size: 16px;
+    color: #666;
+    margin-bottom: 5px;
+  }
+
 </style>
